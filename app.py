@@ -1,8 +1,8 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
-from argon2 import PasswordHasher
+from pwdlib import PasswordHash
 
-pH = PasswordHasher()
+password_hasher = PasswordHash.recommended()
 
 ### DATABASE FUNCTIONS ###
 
@@ -37,7 +37,7 @@ INSERT INTO users VALUES(null,"bernardo", "%s");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
-""" % (pH.hash("password"), pH.hash("omgMPC")))
+""" % (password_hasher.hash("password"), password_hasher.hash("omgMPC")))
 
 
 
@@ -110,10 +110,9 @@ def login():
         db = connect_db()
         c = db.cursor()
         c.execute('SELECT * FROM users WHERE username = ?', (username,))
-        c.execute(statement)
         result = c.fetchall()
 
-        if len(result) > 0 and pH.verify(result[0][2], password):
+        if len(result) > 0 and password_hasher.verify(password, result[0][2]):
             session.clear()
             session['logged_in'] = True
             session['userid'] = result[0][0]
@@ -133,7 +132,7 @@ def register():
         
 
         username = request.form['username']
-        hashed_password = pH.hash(request.form['password'])
+        hashed_password = password_hasher.hash(request.form['password'])
         db = connect_db()
         c = db.cursor()
         c.execute('SELECT * FROM users WHERE password = ?', (hashed_password,))

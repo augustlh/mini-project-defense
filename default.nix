@@ -4,10 +4,9 @@ pkgs.mkShell {
       (python314.withPackages (python-pkgs: with python-pkgs; [
         click
         flask
-        argon2-cffi-bindings
+        pwdlib
       ]))
       sqlite
-      libargon2
       uv
     ];
 }
