@@ -1,8 +1,8 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+from argon2 import PasswordHasher
 
-
-
+pH = PasswordHasher()
 
 ### DATABASE FUNCTIONS ###
 
@@ -32,12 +32,12 @@ CREATE TABLE users (
     password TEXT NOT NULL
 );
 
-INSERT INTO users VALUES(null,"admin", "password");
-INSERT INTO users VALUES(null,"bernardo", "omgMPC");
+INSERT INTO users VALUES(null,"admin", "%s");
+INSERT INTO users VALUES(null,"bernardo", "%s");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
-""")
+""" % (pH.hash("password"), pH.hash("omgMPC")))
 
 
 
@@ -113,11 +113,12 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        statement = "SELECT * FROM users WHERE username = '%s' AND password = '%s';" %(username, password)
+        # statement = "SELECT * FROM users WHERE username = '%s' AND password = '%s';" %(username, password)
+        statement = "SELECT * FROM users WHERE username = '%s';" %username
         c.execute(statement)
         result = c.fetchall()
 
-        if len(result) > 0:
+        if len(result) > 0 and pH.verify(result[0][2], password):
             session.clear()
             session['logged_in'] = True
             session['userid'] = result[0][0]
@@ -137,10 +138,10 @@ def register():
         
 
         username = request.form['username']
-        password = request.form['password']
+        hashed_password = pH.hash(request.form['password'])
         db = connect_db()
         c = db.cursor()
-        pass_statement = """SELECT * FROM users WHERE password = '%s';""" %password
+        pass_statement = """SELECT * FROM users WHERE password = '%s';""" %hashed_password
         user_statement = """SELECT * FROM users WHERE username = '%s';""" %username
         c.execute(pass_statement)
         if(len(c.fetchall())>0):
@@ -153,7 +154,7 @@ def register():
             usererror = "That username is already in use by someone else!"
 
         if(not errored):
-            statement = """INSERT INTO users(id,username,password) VALUES(null,'%s','%s');""" %(username,password)
+            statement = """INSERT INTO users(id,username,password) VALUES(null,'%s','%s');""" %(username,hashed_password)
             print(statement)
             c.execute(statement)
             db.commit()
