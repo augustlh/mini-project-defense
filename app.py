@@ -75,18 +75,21 @@ def notes():
             db = connect_db()
             c = db.cursor()
             attempts = 0
+            check = False
             while(attempts < 50):
                 publicId = random.randrange(1000000000, 9999999999)
 
                 c.execute('SELECT * FROM notes WHERE publicId = ?', (publicId,))
                 if(len(c.fetchall())>0):
                     if(attempts < 50):
-                        error = True
+                        check = True
                     else:
                         attempts = attempts + 1
+                else:
+                    break
 
 
-            if(error != True):
+            if(check != True):
                 c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
                         (session['userid'], time.strftime('%Y-%m-%d %H:%M:%S'), note, publicId))
                 db.commit()
