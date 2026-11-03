@@ -29,7 +29,8 @@ CREATE TABLE notes (
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    UNIQUE (username)
 );
 
 INSERT INTO users VALUES(null,"admin", "password");
@@ -73,10 +74,24 @@ def notes():
             note = request.form['noteinput']
             db = connect_db()
             c = db.cursor()
-            c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
-                        (session['userid'], time.strftime('%Y-%m-%d %H:%M:%S'), note, random.randrange(1000000000, 9999999999)))
-            db.commit()
-            db.close()
+            attempts = 0
+            while(attempts < 50):
+                publicId = random.randrange(1000000000, 9999999999)
+
+                c.execute('SELECT * FROM notes WHERE publicId = ?', (publicId,))
+                if(len(c.fetchall())>0):
+                    if(attempts < 50):
+                        error = True
+                    else:
+                        attempts = attempts + 1
+
+
+            if(error != True):
+                c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
+                        (session['userid'], time.strftime('%Y-%m-%d %H:%M:%S'), note, publicId))
+                db.commit()
+                db.close()
+
         elif request.form['submit_button'] == 'import note':
             noteid = request.form['noteid']
             db = connect_db()
@@ -135,10 +150,6 @@ def register():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        c.execute('SELECT * FROM users WHERE password = ?', (password,))
-        if(len(c.fetchall())>0):
-            errored = True
-            passworderror = "That password is already in use by someone else!"
 
         c.execute('SELECT * FROM users WHERE username = ?', (username,))
         if(len(c.fetchall())>0):
