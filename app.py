@@ -17,6 +17,7 @@ def init_db():
 
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS notes;
+DROP TABLE IF EXISTS sharedNotes;
 
 CREATE TABLE notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +34,8 @@ CREATE TABLE users (
 );
 
 CREATE TABLE sharedNotes (
-    Primary ID INTEGER NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assocID INTEGER NOT NULL,
     assocCreator INTEGER NOT NULL,
     assocReader INTEGER NOT NULL
 );
@@ -42,6 +44,8 @@ INSERT INTO users VALUES(null,"admin", "password");
 INSERT INTO users VALUES(null,"bernardo", "omgMPC");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
+
+INSERT INTO sharedNotes VALUES(null, 1234567890, 2, "admin");
 
 """)
 
@@ -87,11 +91,13 @@ def notes():
             noteid = request.form['noteid']
             db = connect_db()
             c = db.cursor()
-            c.execute('SELECT notes.publicID sharedNotes.publicID FROM (notes WHERE notes.publicID = ? INNER JOIN sharedNotes ON notes.publicID = sharedNotes.publicID WHERE assocReader = ?)', (noteid, session['userid']))
-            result = c.fetchall()
-            if(len(result)>0):
-                row = result[0]
-                print(row)
+            c.execute('SELECT username FROM users WHERE id = ?', (session['userid'],))
+            user = c.fetchone()
+            c.execute('SELECT * FROM sharedNotes WHERE assocReader = ? AND assocID = ?', (user, noteid,))
+            check = c.fetchall()
+            if(len(check)>0):
+                c.execute('SELECT * FROM notes WHERE id = ?', (noteid,))
+                result = c.fetchone()
                 c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
                  (session['userid'],row[2],row[3],row[4]))
             else:
@@ -180,8 +186,7 @@ def logout():
 
 if __name__ == "__main__":
     #create database if it doesn't exist yet
-    if not os.path.exists(app.database):
-        init_db()
+    init_db()    
     runport = 5000
     if(len(sys.argv)==2):
         runport = sys.argv[1]
