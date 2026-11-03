@@ -32,6 +32,12 @@ CREATE TABLE users (
     password TEXT NOT NULL
 );
 
+CREATE TABLE sharedNotes (
+    Primary ID INTEGER NOT NULL,
+    assocCreator INTEGER NOT NULL,
+    assocReader INTEGER NOT NULL
+);
+
 INSERT INTO users VALUES(null,"admin", "password");
 INSERT INTO users VALUES(null,"bernardo", "omgMPC");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
@@ -81,10 +87,11 @@ def notes():
             noteid = request.form['noteid']
             db = connect_db()
             c = db.cursor()
-            c.execute('SELECT * from NOTES where publicID = ?', (noteid,))
+            c.execute('SELECT notes.publicID sharedNotes.publicID FROM (notes WHERE notes.publicID = ? INNER JOIN sharedNotes ON notes.publicID = sharedNotes.publicID WHERE assocReader = ?)', (noteid, session['userid']))
             result = c.fetchall()
             if(len(result)>0):
                 row = result[0]
+                print(row)
                 c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
                  (session['userid'],row[2],row[3],row[4]))
             else:
