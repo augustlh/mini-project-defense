@@ -3,12 +3,6 @@ revision = 3
 requires-python = ">=3.14"
 
 [[package]]
-name = "argon2"
-version = "0.1.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5c/55/94605d5bfa140601fde256f548ed1733a5327f2d7d159b60a727e8613170/argon2-0.1.10.tar.gz", hash = "sha256:523a3d3b88f3a46244b4976a6ca81994705848538bbe9e41426ea54ccb75eb90", size = 28270, upload-time = "2015-12-20T22:40:47.144Z" }
-
-[[package]]
 name = "argon2-cffi"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -260,16 +254,28 @@ name = "mini-project-defense"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "argon2" },
-    { name = "argon2-cffi" },
     { name = "flask" },
+    { name = "pwdlib", extra = ["argon2"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "argon2", specifier = ">=0.1.10" },
-    { name = "argon2-cffi", specifier = ">=25.1.0" },
     { name = "flask", specifier = ">=3.1.3" },
+    { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.1" },
+]
+
+[[package]]
+name = "pwdlib"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/a6/644f28a21cb68920d06b264e72b864ac9bff2377f4757dd4648b5110b3ad/pwdlib-0.3.1.tar.gz", hash = "sha256:2ffd1955c92190d5bfbdc5071bf7d422568b83f943453ebd3d43d031ccba37b1", size = 216951, upload-time = "2026-08-12T08:38:38.383Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/2e/51979293b2337f508597d13ee20db1ac1d43e48086b2ed7de6da213ed46b/pwdlib-0.3.1-py3-none-any.whl", hash = "sha256:944fa439198bed8ac3ea63dac76ea4ae43e2a35f4f21e9e725e82d3c2b97d6a5", size = 9272, upload-time = "2026-08-12T08:38:37.483Z" },
+]
+
+[package.optional-dependencies]
+argon2 = [
+    { name = "argon2-cffi" },
 ]
 
 [[package]]
