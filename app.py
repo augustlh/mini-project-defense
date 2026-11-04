@@ -44,8 +44,7 @@ INSERT INTO users VALUES(null,"admin", "password");
 INSERT INTO users VALUES(null,"bernardo", "omgMPC");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
-
-INSERT INTO sharedNotes VALUES(null, 1234567890, 2, "admin");
+INSERT INTO sharedNotes VALUES(null, 1234567890, 2, 1);
 
 """)
 
@@ -91,17 +90,17 @@ def notes():
             noteid = request.form['noteid']
             db = connect_db()
             c = db.cursor()
-            c.execute('SELECT username FROM users WHERE id = ?', (session['userid'],))
-            user = c.fetchone()
-            c.execute('SELECT * FROM sharedNotes WHERE assocReader = ? AND assocID = ?', (user, noteid,))
-            check = c.fetchall()
-            if(len(check)>0):
-                c.execute('SELECT * FROM notes WHERE id = ?', (noteid,))
-                result = c.fetchone()
+            # get the username using the users id
+            c.execute('SELECT * FROM users WHERE id = ?', (session['userid'],))
+            username = c.fetchone()[1]
+            c.execute("SELECT notes.* FROM notes JOIN sharedNotes ON notes.assocUser = sharedNotes.assocCreator AND notes.publicID = sharedNotes.assocID  WHERE notes.publicID = ? AND sharedNotes.assocReader = ?", (noteid, username))
+            result = c.fetchall()
+            if(len(result)>0):
+                row = result[0]
                 c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
                  (session['userid'],row[2],row[3],row[4]))
             else:
-                importerror="No such note with that ID!"
+                importerror="No such note with that ID which was shared with you!"
             db.commit()
             db.close()
     
@@ -186,7 +185,8 @@ def logout():
 
 if __name__ == "__main__":
     #create database if it doesn't exist yet
-    init_db()    
+    if not os.path.exists(app.database):
+        init_db()
     runport = 5000
     if(len(sys.argv)==2):
         runport = sys.argv[1]
