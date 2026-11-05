@@ -84,10 +84,10 @@ def export_notes():
     with open(filepath, "w") as f:
         f.write(idk)
 
-    output_file = f"/tmp/exports/{filename}.pdf"
+    output_file = f"/tmp/exports/{filename}"
     subprocess.run(f"weasyprint {filepath} {output_file}", shell=True)
     
-    return send_file(output_file, as_attachment=True)
+    return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
 
 @app.route("/notes/", methods=('GET', 'POST'))
 @login_required

