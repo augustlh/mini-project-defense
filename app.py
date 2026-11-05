@@ -29,7 +29,7 @@ CREATE TABLE notes (
 
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
 
@@ -103,6 +103,34 @@ def notes():
                 importerror="No such note with that ID which was shared with you!"
             db.commit()
             db.close()
+        elif request.form['submit_button'] == 'share note':
+            noteid = request.form['shareid']
+            otherUser = request.form['otherid']
+            db = connect_db()
+            c = db.cursor()
+
+            # check if other user exists
+            c.execute("SELECT * FROM users WHERE username = ?", (otherUser,))
+            result = c.fetchall()
+            if(len(result)<=0):
+                importerror="No such username exists!"
+                db.commit()
+                db.close()
+                return render_template('notes.html',notes=notes,importerror=importerror)
+            
+            #check if this user has a note with such an ID
+            c.execute("SELECT * FROM notes WHERE assocUser = ? AND publicID = ?", (session['userid'], noteid))
+            if(len(result)<=0):
+                importerror="You don't have any note that ID"
+                db.commit()
+                db.close()
+                return render_template('notes.html',notes=notes,importerror=importerror)
+
+            #share the note with the other user
+            c.execute("INSERT INTO sharedNotes VALUES (null, ?, ?, ?)", (noteid, session['userid'], otherUser))
+            db.commit()
+            db.close()
+            
     
     db = connect_db()
     c = db.cursor()
