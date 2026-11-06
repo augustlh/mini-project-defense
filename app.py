@@ -1,8 +1,8 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+from pwdlib import PasswordHash
 
-
-
+password_hasher = PasswordHash.recommended()
 
 ### DATABASE FUNCTIONS ###
 
@@ -32,12 +32,12 @@ CREATE TABLE users (
     password TEXT NOT NULL
 );
 
-INSERT INTO users VALUES(null,"admin", "password");
-INSERT INTO users VALUES(null,"bernardo", "omgMPC");
+INSERT INTO users VALUES(null,"admin", "%s");
+INSERT INTO users VALUES(null,"bernardo", "%s");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
-""")
+""" % (password_hasher.hash("password"), password_hasher.hash("omgMPC")))
 
 
 
@@ -109,10 +109,10 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+        c.execute('SELECT * FROM users WHERE username = ?', (username,))
         result = c.fetchall()
 
-        if len(result) > 0:
+        if len(result) > 0 and password_hasher.verify(password, result[0][2]):
             session.clear()
             session['logged_in'] = True
             session['userid'] = result[0][0]
@@ -132,10 +132,10 @@ def register():
         
 
         username = request.form['username']
-        password = request.form['password']
+        hashed_password = password_hasher.hash(request.form['password'])
         db = connect_db()
         c = db.cursor()
-        c.execute('SELECT * FROM users WHERE password = ?', (password,))
+        c.execute('SELECT * FROM users WHERE password = ?', (hashed_password,))
         if(len(c.fetchall())>0):
             errored = True
             passworderror = "That password is already in use by someone else!"
@@ -146,7 +146,7 @@ def register():
             usererror = "That username is already in use by someone else!"
 
         if(not errored):
-            c.execute('INSERT INTO users(id,username,password) VALUES(null,?,?)', (username,password))
+            c.execute('INSERT INTO users(id,username,password) VALUES(null,?,?)', (username,hashed_password))
             db.commit()
             db.close()
             return f"""<html>
