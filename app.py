@@ -1,4 +1,6 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
+import subprocess
+
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
 from pwdlib import PasswordHash
 
@@ -39,7 +41,8 @@ INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567
 
 """ % (password_hasher.hash("password"), password_hasher.hash("omgMPC")))
 
-
+os.makedirs("/tmp/notes", exist_ok=True)
+os.makedirs("/tmp/exports", exist_ok=True)
 
 ### APPLICATION SETUP ###
 app = Flask(__name__)
@@ -62,6 +65,29 @@ def index():
     else:
         return redirect(url_for('notes'))
 
+
+@app.route("/notes/export", methods=('POST',))
+@login_required
+def export_notes():    
+    filename = request.form["filename"]
+    
+    db = connect_db()
+    c = db.cursor()
+    
+    c.execute("SELECT note, dateWritten FROM notes WHERE assocUser = ?", (session['userid'],))
+    rows = c.fetchall()
+    db.close() 
+    
+    idk = f"<html><head></head><body><ul>{"".join(f"<li>{date} - {note}</li>" for note, date in rows)}</ul></body></html>"
+    
+    filepath = f"/tmp/notes/{session['userid']}.html"
+    with open(filepath, "w") as f:
+        f.write(idk)
+
+    output_file = f"/tmp/exports/{filename}"
+    subprocess.run(f"weasyprint {filepath} {output_file}", shell=True)
+    
+    return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
 
 @app.route("/notes/", methods=('GET', 'POST'))
 @login_required

