@@ -141,6 +141,8 @@ def notes():
             result = c.fetchall()
             if(len(result)<=0):
                 importerror="No such username exists!"
+                c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
+                notes = c.fetchall()
                 db.commit()
                 db.close()
                 return render_template('notes.html',notes=notes,importerror=importerror)
@@ -149,6 +151,8 @@ def notes():
             c.execute("SELECT * FROM notes WHERE assocUser = ? AND publicID = ?", (session['userid'], noteid))
             if(len(result)<=0):
                 importerror="You don't have any note that ID"
+                c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
+                notes = c.fetchall()
                 db.commit()
                 db.close()
                 return render_template('notes.html',notes=notes,importerror=importerror)
