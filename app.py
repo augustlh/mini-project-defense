@@ -85,9 +85,13 @@ def export_notes():
         f.write(idk)
 
     output_file = f"/tmp/exports/{filename}"
-    subprocess.run(f"weasyprint {filepath} {output_file}", shell=True)
+    res = subprocess.run(f"weasyprint {filepath} {output_file}", capture_output=True, shell=True)
+
+    if len(res.stdout) == 0:
+        return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
+    else:
+        return "Error: " + str(res.stdout), 400
     
-    return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
 
 @app.route("/notes/", methods=('GET', 'POST'))
 @login_required
