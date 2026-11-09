@@ -1,5 +1,6 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
 import subprocess
+from string import ascii_lowercase, ascii_uppercase
 
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
 from pwdlib import PasswordHash
@@ -153,6 +154,31 @@ def login():
     return render_template('login.html',error=error)
 
 
+
+def password_is_unsafe(password: str) -> (bool, str):
+    def contains_one_of(password: str, chars: list[str]) -> bool:
+        for ch in chars:
+            if ch in password:
+                return True
+        return False
+
+    if len(password) < 8:
+        return True, "Password must at least be 8 characters long"
+
+    if not contains_one_of(password, map(str, range(0, 10)) ):
+        return True, "Password must contain at least one digit"
+
+    if not contains_one_of(password, ascii_lowercase):
+        return True, "Password must contain at least one lower case character"
+
+    if not contains_one_of(password, ascii_uppercase):
+        return True, "Password must contain at least one upper case character"
+
+    if not contains_one_of(password, list("+-*_/(){}[]!\"#$%&=?+,.;:^'~\\|")):
+        return True, "Password must contain at least special character"
+    return False, "Safe password"
+    
+
 @app.route("/register/", methods=('GET', 'POST'))
 def register():
     errored = False
@@ -162,13 +188,13 @@ def register():
         
 
         username = request.form['username']
-        hashed_password = password_hasher.hash(request.form['password'])
+        plaintext_password = request.form['password']
+
+        errored, passworderror = password_is_unsafe(plaintext_password)
+        hashed_password = password_hasher.hash(plaintext_password)
+
         db = connect_db()
         c = db.cursor()
-        c.execute('SELECT * FROM users WHERE password = ?', (hashed_password,))
-        if(len(c.fetchall())>0):
-            errored = True
-            passworderror = "That password is already in use by someone else!"
 
         c.execute('SELECT * FROM users WHERE username = ?', (username,))
         if(len(c.fetchall())>0):
