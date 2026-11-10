@@ -1,7 +1,7 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
-import subprocess
+import subprocess, uuid
 
-from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+from flask import Flask, current_app, g, session, redirect, render_template, url_for, request, send_file
 from pwdlib import PasswordHash
 
 password_hasher = PasswordHash.recommended()
@@ -26,7 +26,7 @@ CREATE TABLE notes (
     assocUser INTEGER NOT NULL,
     dateWritten DATETIME NOT NULL,
     note TEXT NOT NULL,
-    publicID INTEGER NOT NULL
+    publicID TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE users (
@@ -37,7 +37,7 @@ CREATE TABLE users (
 
 CREATE TABLE sharedNotes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    assocID INTEGER NOT NULL,
+    assocID TEXT NOT NULL,
     assocCreator INTEGER NOT NULL,
     assocReader INTEGER NOT NULL
 );
@@ -45,9 +45,9 @@ CREATE TABLE sharedNotes (
 
 INSERT INTO users VALUES(null,"admin", "%s");
 INSERT INTO users VALUES(null,"bernardo", "%s");
-INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
-INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
-INSERT INTO sharedNotes VALUES(null, 1234567890, 2, 1);
+INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend","2713b6d9-3a66-46d2-b89a-c58bf3479431");
+INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls","16943b9a-6068-4a55-be40-60df2f7909f1");
+INSERT INTO sharedNotes VALUES(null, "2713b6d9-3a66-46d2-b89a-c58bf3479431", 2, 1);
 
 """ % (password_hasher.hash("password"), password_hasher.hash("omgMPC")))
 
@@ -103,6 +103,20 @@ def export_notes():
         return "Error: " + str(res.stdout), 400
     
 
+def create_note(userid, date, note, db, cursor, max_attempts):
+    for attempt in range(max_attempts):
+        pid = str(uuid.uuid4())
+
+        try:
+            cursor.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
+                          (userid, date, note, pid))
+            db.commit()
+            return True
+        except e:
+            db.rollback()
+            continue
+    return False
+
 @app.route("/notes/", methods=('GET', 'POST'))
 @login_required
 def notes():
@@ -113,9 +127,10 @@ def notes():
             note = request.form['noteinput']
             db = connect_db()
             c = db.cursor()
-            c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
-                        (session['userid'], time.strftime('%Y-%m-%d %H:%M:%S'), note, random.randrange(1000000000, 9999999999)))
-            db.commit()
+
+            res = create_note(session['userid'], time.strftime('%Y-%m-%d %H:%M:%S'), note, db, c, 40)
+            if not res:
+                importerror="Error creating note, please try again"
             db.close()
         elif request.form['submit_button'] == 'import note':
             noteid = request.form['noteid']
@@ -128,8 +143,9 @@ def notes():
             result = c.fetchall()
             if(len(result)>0):
                 row = result[0]
-                c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
-                 (session['userid'],row[2],row[3],row[4]))
+                res = create_note(session['userid'],row[2], row[3], db, c, 40)
+                if not res:
+                    importerror="Internal error"
             else:
                 importerror="No such note with that ID which was shared with you!"
             db.commit()
@@ -169,6 +185,7 @@ def notes():
     
     db = connect_db()
     c = db.cursor()
+    print(session['userid'])
     c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
     notes = c.fetchall()
     print(notes)
