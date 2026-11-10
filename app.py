@@ -19,6 +19,7 @@ def init_db():
 
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS notes;
+DROP TABLE IF EXISTS sharedNotes;
 
 CREATE TABLE notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,14 +31,23 @@ CREATE TABLE notes (
 
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
+
+CREATE TABLE sharedNotes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assocID INTEGER NOT NULL,
+    assocCreator INTEGER NOT NULL,
+    assocReader INTEGER NOT NULL
+);
+
 
 INSERT INTO users VALUES(null,"admin", "%s");
 INSERT INTO users VALUES(null,"bernardo", "%s");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
+INSERT INTO sharedNotes VALUES(null, 1234567890, 2, 1);
 
 """ % (password_hasher.hash("password"), password_hasher.hash("omgMPC")))
 
@@ -111,16 +121,51 @@ def notes():
             noteid = request.form['noteid']
             db = connect_db()
             c = db.cursor()
-            c.execute('SELECT * from NOTES where publicID = ?', (noteid,))
+            # get the username using the users id
+            c.execute('SELECT * FROM users WHERE id = ?', (session['userid'],))
+            username = c.fetchone()[1]
+            c.execute("SELECT notes.* FROM notes JOIN sharedNotes ON notes.assocUser = sharedNotes.assocCreator AND notes.publicID = sharedNotes.assocID  WHERE notes.publicID = ? AND sharedNotes.assocReader = ?", (noteid, username))
             result = c.fetchall()
             if(len(result)>0):
                 row = result[0]
                 c.execute('INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?)',
                  (session['userid'],row[2],row[3],row[4]))
             else:
-                importerror="No such note with that ID!"
+                importerror="No such note with that ID which was shared with you!"
             db.commit()
             db.close()
+        elif request.form['submit_button'] == 'share note':
+            noteid = request.form['shareid']
+            otherUser = request.form['otherid']
+            db = connect_db()
+            c = db.cursor()
+
+            # check if other user exists
+            c.execute("SELECT * FROM users WHERE username = ?", (otherUser,))
+            result = c.fetchall()
+            if(len(result)<=0):
+                importerror="No such username exists!"
+                c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
+                notes = c.fetchall()
+                db.commit()
+                db.close()
+                return render_template('notes.html',notes=notes,importerror=importerror)
+            
+            #check if this user has a note with such an ID
+            c.execute("SELECT * FROM notes WHERE assocUser = ? AND publicID = ?", (session['userid'], noteid))
+            if(len(result)<=0):
+                importerror="You don't have any note that ID"
+                c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
+                notes = c.fetchall()
+                db.commit()
+                db.close()
+                return render_template('notes.html',notes=notes,importerror=importerror)
+
+            #share the note with the other user
+            c.execute("INSERT INTO sharedNotes VALUES (null, ?, ?, ?)", (noteid, session['userid'], otherUser))
+            db.commit()
+            db.close()
+            
     
     db = connect_db()
     c = db.cursor()

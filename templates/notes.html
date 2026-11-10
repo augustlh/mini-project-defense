@@ -266,7 +266,7 @@ ol, ul, dl {
         </article>
       </section>
       <section class="notes__body-content notes__body-top-padding">
-        <p class="notes__text">Here are your notes:, you can share your notes by sharing your public id</p>
+        <p class="notes__text">Here are your notes, you can share your notes by sharing your public id</p>
         <ul class="notes__item-container">
             {% for note in notes %}
               {% include "note.html" %}
@@ -275,6 +275,9 @@ ol, ul, dl {
       </section>
       <section class="notes__body-content notes__body-bottom-padding">
         <div class="notes__body-top-border"></div>
+        {% if importerror %}
+              <p class="p-large"><strong>Error: </strong> {{ importerror }}
+        {% endif %}
         <form action="" method="post" class="notes__input-wrapper">
             <div class="notes__input-container">
               <label for="note">New note:</label>
@@ -282,7 +285,6 @@ ol, ul, dl {
             </div>
             <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="add note">
         </form> 
-        
         <form action="" method="post" class="notes__input-wrapper">
             <div class="notes__input-container">
               <label for="note">Import a note from someone else:</label>
@@ -290,7 +292,13 @@ ol, ul, dl {
             </div>
             <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="import note">
         </form> 
-
+        <form action="" method="post" class="notes__input-wrapper">
+            <div class="notes__input-container">
+              <label for="note">Share your notes with someone else:</label>
+              <input class="form-control notes__input__no-margin" type="text" placeholder="Public Note ID" name="shareid" value={{request.form.shareid}}>
+              <input class="form-control notes__input__no-margin" type="text" placeholder="Username" name="otherid" value={{request.form.personid}}>
+            </div>
+            <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="share note">
         <form action="/notes/export" method="post" class="notes__input-wrapper">
             <div class="notes__input-container">
               <label for="note">Export your notes to PDF:</label>
@@ -298,9 +306,6 @@ ol, ul, dl {
             </div>
             <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="Export notes">
         </form> 
-        {% if importerror %}
-              <p class="p-large"><strong>Error:</strong> {{ importerror }}
-        {% endif %}
       </section>     
       
       <!-- Scripts -->
