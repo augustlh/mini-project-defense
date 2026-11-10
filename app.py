@@ -2,7 +2,7 @@ import json, sqlite3, click, functools, os, hashlib,time, random, sys
 import subprocess
 from string import ascii_lowercase, ascii_uppercase
 
-from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+from flask import Flask, current_app, g, session, redirect, render_template, url_for, request, send_file
 from pwdlib import PasswordHash
 
 password_hasher = PasswordHash.recommended()
@@ -81,7 +81,10 @@ def index():
 @app.route("/notes/export", methods=('POST',))
 @login_required
 def export_notes():    
+    print("Called")
     filename = request.form["filename"]
+
+    print("file: ", filename)
     
     db = connect_db()
     c = db.cursor()
@@ -91,6 +94,8 @@ def export_notes():
     db.close() 
     
     idk = f"<html><head></head><body><ul>{"".join(f"<li>{date} - {note}</li>" for note, date in rows)}</ul></body></html>"
+
+    print(idk)
     
     filepath = f"/tmp/notes/{session['userid']}.html"
     with open(filepath, "w") as f:
@@ -98,6 +103,8 @@ def export_notes():
 
     output_file = f"/tmp/exports/{filename}"
     res = subprocess.run(f"weasyprint {filepath} {output_file}", capture_output=True, shell=True)
+
+    print(str(res))
 
     if len(res.stdout) == 0:
         return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
