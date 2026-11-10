@@ -188,7 +188,7 @@ def notes():
     
     db = connect_db()
     c = db.cursor()
-; [ -f "$_p"    c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
+    c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
     notes = c.fetchall()
     print(notes)
     
