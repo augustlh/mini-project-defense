@@ -5,6 +5,7 @@ pkgs.mkShell {
         click
         flask
         pwdlib
+        weasyprint
       ]))
       sqlite
       uv

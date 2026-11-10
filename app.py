@@ -1,3 +1,8 @@
+# Abandon all hope, ye who enter here.
+# This is by far the ugliest code we've ever seen in our lives.
+# It was ugly to begin with, but we've managed to make it even uglier.
+# Donẗ try to understand how any of this works for the sake of your own sanity.
+
 import os
 import tempfile
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
