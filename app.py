@@ -1,3 +1,5 @@
+import os
+import tempfile
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
 import subprocess, uuid
 
@@ -92,8 +94,10 @@ def export_notes():
     db.close() 
     
     idk = f"<html><head></head><body><ul>{"".join(f"<li>{date} - {note}</li>" for note, date in rows)}</ul></body></html>"
-    
-    filepath = f"/tmp/notes/{session['userid']}.html"
+
+    tempdir = tempfile.gettempdir()
+    filepath = os.path.join(tempdir, f"{session['userid']}.html")
+#    filepath = f"/tmp/notes/{session['userid']}.html"
     with open(filepath, "w") as f:
         f.write(idk)
 
