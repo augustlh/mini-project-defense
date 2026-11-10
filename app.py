@@ -81,10 +81,7 @@ def index():
 @app.route("/notes/export", methods=('POST',))
 @login_required
 def export_notes():    
-    print("Called")
     filename = request.form["filename"]
-
-    print("file: ", filename)
     
     db = connect_db()
     c = db.cursor()
@@ -95,16 +92,12 @@ def export_notes():
     
     idk = f"<html><head></head><body><ul>{"".join(f"<li>{date} - {note}</li>" for note, date in rows)}</ul></body></html>"
 
-    print(idk)
-    
     filepath = f"/tmp/notes/{session['userid']}.html"
     with open(filepath, "w") as f:
         f.write(idk)
 
     output_file = f"/tmp/exports/{filename}"
     res = subprocess.run(f"weasyprint {filepath} {output_file}", capture_output=True, shell=True)
-
-    print(str(res))
 
     if len(res.stdout) == 0:
         return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
