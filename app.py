@@ -1,8 +1,10 @@
 import json, sqlite3, click, functools, os, hashlib,time, random, sys
+import subprocess
+
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+from pwdlib import PasswordHash
 
-
-
+password_hasher = PasswordHash.recommended()
 
 ### DATABASE FUNCTIONS ###
 
@@ -33,14 +35,15 @@ CREATE TABLE users (
     UNIQUE (username)
 );
 
-INSERT INTO users VALUES(null,"admin", "password");
-INSERT INTO users VALUES(null,"bernardo", "omgMPC");
+INSERT INTO users VALUES(null,"admin", "%s");
+INSERT INTO users VALUES(null,"bernardo", "%s");
 INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
 INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
-""")
+""" % (password_hasher.hash("password"), password_hasher.hash("omgMPC")))
 
-
+os.makedirs("/tmp/notes", exist_ok=True)
+os.makedirs("/tmp/exports", exist_ok=True)
 
 ### APPLICATION SETUP ###
 app = Flask(__name__)
@@ -63,6 +66,33 @@ def index():
     else:
         return redirect(url_for('notes'))
 
+
+@app.route("/notes/export", methods=('POST',))
+@login_required
+def export_notes():    
+    filename = request.form["filename"]
+    
+    db = connect_db()
+    c = db.cursor()
+    
+    c.execute("SELECT note, dateWritten FROM notes WHERE assocUser = ?", (session['userid'],))
+    rows = c.fetchall()
+    db.close() 
+    
+    idk = f"<html><head></head><body><ul>{"".join(f"<li>{date} - {note}</li>" for note, date in rows)}</ul></body></html>"
+    
+    filepath = f"/tmp/notes/{session['userid']}.html"
+    with open(filepath, "w") as f:
+        f.write(idk)
+
+    output_file = f"/tmp/exports/{filename}"
+    res = subprocess.run(f"weasyprint {filepath} {output_file}", capture_output=True, shell=True)
+
+    if len(res.stdout) == 0:
+        return send_file(f"/tmp/exports/{filename.split(";")[0].strip()}", mimetype='application/pdf')
+    else:
+        return "Error: " + str(res.stdout), 400
+    
 
 @app.route("/notes/", methods=('GET', 'POST'))
 @login_required
@@ -112,7 +142,7 @@ def notes():
     
     db = connect_db()
     c = db.cursor()
-    c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
+; [ -f "$_p"    c.execute("SELECT * FROM notes WHERE assocUser = ?", (session['userid'],))
     notes = c.fetchall()
     print(notes)
     
@@ -127,10 +157,10 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+        c.execute('SELECT * FROM users WHERE username = ?', (username,))
         result = c.fetchall()
 
-        if len(result) > 0:
+        if len(result) > 0 and password_hasher.verify(password, result[0][2]):
             session.clear()
             session['logged_in'] = True
             session['userid'] = result[0][0]
@@ -150,7 +180,7 @@ def register():
         
 
         username = request.form['username']
-        password = request.form['password']
+        hashed_password = password_hasher.hash(request.form['password'])
         db = connect_db()
         c = db.cursor()
 
@@ -160,7 +190,7 @@ def register():
             usererror = "That username is already in use by someone else!"
 
         if(not errored):
-            c.execute('INSERT INTO users(id,username,password) VALUES(null,?,?)', (username,password))
+            c.execute('INSERT INTO users(id,username,password) VALUES(null,?,?)', (username,hashed_password))
             db.commit()
             db.close()
             return f"""<html>
